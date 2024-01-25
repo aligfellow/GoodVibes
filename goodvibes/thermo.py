@@ -2,7 +2,8 @@
 from __future__ import print_function, absolute_import
 
 import ctypes, math, os.path, sys
-import numpy as np
+import numpy as np  
+import cclib
 
 # Importing regardless of relative import
 try:
@@ -99,7 +100,7 @@ def calc_vibrational_energy(frequency_wn, temperature, freq_scale_factor, fract_
     fract_modelsys (list): MM frequency scale factors obtained from ONIOM calculations.
 
     Returns:
-    float: vibrational energy of chemical system.
+    float: vibrational energy of chemical system. 
     """
     if fract_modelsys is not False:
         freq_scale_factor = [freq_scale_factor[0] * fract_modelsys[i] + freq_scale_factor[1] * (1.0 - fract_modelsys[i])
@@ -503,6 +504,10 @@ class calc_bbe:
                                     im_frequency_wn.append(x)
                         except IndexError:
                             pass
+                        self.frequency_wn = frequency_wn
+                        self.im_freq = im_frequency_wn
+                        self.inverted_freqs = inverted_freqs
+
                 # For QM calculations look for SCF energies, last one will be the optimized energy
                 elif line.strip().startswith('SCF Done:'):
                     self.scf_energy = float(line.strip().split()[4])
@@ -650,7 +655,98 @@ class calc_bbe:
                     msecs = 0
                     self.cpu = [days,hours,mins,secs,msecs]
 
-        self.inverted_freqs = inverted_freqs
+        if self.sp_program == 'Orca' or self.program == 'Orca':
+            # Iterate
+            orcaparse = cclib.parser.ORCA(file)
+            orcadata = orcaparse.parse()
+            # try:
+            all_freqs = orcadata.vibfreqs.tolist()
+            print(all_freqs)
+            most_low_freq = min(all_freqs) # get lowest mode
+            print(most_low_freq)
+            im_frequency_wn = []
+            inverted_freqs = []
+            for x in all_freqs:
+                if x > 0.00:
+                    frequency_wn.append(x)
+                elif x < -1 * im_freq_cutoff:
+                    if invert is not False:
+                        if invert == 'auto':
+                            if 'optts' in orcadata.metadata['keywords'].lower():
+                                if x == most_low_freq:
+                                    im_frequency_wn.append(x)
+                                    im_freq = [ x ] 
+                                else:
+                                    frequency_wn.append(x * -1.)
+                                    inverted_freqs.append(x)
+                            else:
+                                frequency_wn.append(x * -1.)
+                                inverted_freqs.append(x)
+                        elif x > float(invert):
+                            frequency_wn.append(x * -1.)
+                            inverted_freqs.append(x)
+                        else:
+                            im_frequency_wn.append(x)
+                    else:
+                        im_frequency_wn.append(x)
+            
+            self.inverted_freqs = inverted_freqs
+            self.frequency_wn = frequency_wn
+            self.im_freq = im_frequency_wn
+            self.im_frequency_wn = im_frequency_wn
+
+            for i,line in enumerate(g_output):
+                # For QM calculations look for SCF energies, last one will be the optimized energy
+                if line.strip().find('FINAL SINGLE POINT ENERGY') != -1:
+                    self.scf_energy = float(line.strip().split()[4])
+                # Look for thermal corrections, paying attention to point group symmetry
+                elif line.strip().startswith('Zero point energy'):
+                    self.zero_point_corr = float(line.strip().split()[4]) # in AU
+                # Grab Multiplicity
+                elif 'Multiplicity' in line.strip():
+                    try:
+                        self.mult = int(line.split()[3])
+                    except:
+                        self.mult = 1 # defaulting multiplicity to 1
+                # Grab molecular mass
+                elif line.strip().find('Total Mass') != -1:
+                    molecular_mass = float(line.strip().split()[3])
+                # Grab rational symmetry number
+                elif line.strip().find('Symmetry Number') != -1:
+                    if not ssymm:
+                        symmno = int(line.strip().split()[-1][:])
+                # Grab point group
+                elif line.strip().find('Point Group:') != -1:
+                    if line.strip().split()[2] == 'D*H,' or line.strip().split()[2] == 'C*V,':
+                        linear_mol = 1
+                # Grab rotational constants (convert cm-1 to GHz)
+                elif line.strip().find('Rotational constants in cm-1') != -1:
+                    self.roconst = [float(line.strip().split()[4]),
+                            float(line.strip().split()[5]),
+                            float(line.strip().split()[6])]
+                    
+                    # convert to GHz *AFTER* the calculation of rotemps
+                    # self.roconst = [ x * 29.9792458 for x in self.roconst ] # convert to GHz
+
+                    # ORCA we have to calculate the rotational temperatures ourselves
+                    # rotemp = hc [rocont] / kB 
+                    PLANCK_CONSTANT = 6.62606957e-34  # J * s
+                    SPEED_OF_LIGHT = 2.99792458e10  # cm / s
+                    BOLTZMANN_CONSTANT = 1.3806488e-23  # J / K
+
+                    self.rotemp = [ PLANCK_CONSTANT * SPEED_OF_LIGHT * x / BOLTZMANN_CONSTANT for x in self.roconst]
+                    rotemp = self.rotemp
+                    # convert roconst to GHz
+                    self.roconst = [ x * 29.9792458 for x in self.roconst ] # convert to GHz
+
+                if "TOTAL RUN TIME" in line.strip():
+                    days = int(line.split()[3]) 
+                    hours = int(line.split()[5])
+                    mins = int(line.split()[7]) 
+                    secs = int(line.split()[9]) 
+                    msecs = int(line.split()[11])
+                    self.cpu = [days, hours, mins, secs, msecs]
+
 
         if glowfreq != '':
             frequency_wn = []
@@ -689,8 +785,15 @@ class calc_bbe:
                 u_vib = calc_vibrational_energy(frequency_wn, temperature, freq_scale_factor, fract_modelsys)
                 s_rot = calc_rotational_entropy(self.zero_point_corr, linear_mol, symmno, rotemp, temperature)
 
+                print(f'ZPE: {zpe * 3.808798033989866e-7}')
+                print(f'Urot: {u_rot * 3.808798033989866e-7}')
+                print(f'Uvib: {u_vib * 3.808798033989866e-7}')
+                print(f'Srot: {s_rot * 3.808798033989866e-7}')
+
                 # Calculate harmonic entropy, free-rotor entropy and damping function for each frequency
                 Svib_rrho = calc_rrho_entropy(frequency_wn, temperature, freq_scale_factor, fract_modelsys)
+
+                print(f'Svib_rrho: {Svib_rrho}')
 
                 if s_freq_cutoff > 0.0:
                     Svib_rrqho = calc_rrho_entropy(cutoffs, temperature, freq_scale_factor, fract_modelsys)

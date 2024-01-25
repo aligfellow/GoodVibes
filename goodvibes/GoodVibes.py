@@ -1042,6 +1042,8 @@ def main():
                        d3_energy, cosmo=cosmo_option, ssymm=ssymm_option, mm_freq_scale_factor=vmm_option, 
                        inertia=options.inertia, g4=options.g4, glowfreq=options.glowfreq)
 
+        print(dir(bbe))
+        print(vars(bbe))
         # Populate bbe_vals with indivual bbe entries for each file
         bbe_vals.append(bbe)
 
@@ -1049,7 +1051,7 @@ def main():
     file_list = [file for file in files]
     thermo_data = dict(zip(file_list, bbe_vals))  # The collected thermochemical data for all files
     interval_bbe_data, interval_thermo_data = [], []
-
+    
     inverted_freqs, inverted_files = [], []
     for file in files:
         if len(thermo_data[file].inverted_freqs) > 0:
