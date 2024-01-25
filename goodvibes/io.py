@@ -720,7 +720,6 @@ def read_initial(file):
                     solvation_model = "scrf=" + keyword_line[start_scrf:end_scrf]
     # ORCA parsing for solvation model
     elif program == 'Orca':
-        print("orca")
         keyword_line_1 = "gas phase"
         keyword_line_2 = ''
         keyword_line_3 = ''
