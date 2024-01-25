@@ -397,7 +397,7 @@ class calc_bbe:
         linear_warning (bool): flag for linear molecules, may be missing a rotational constant.
     """
     def __init__(self, file, QS, QH, s_freq_cutoff, H_FREQ_CUTOFF, temperature, conc, freq_scale_factor, solv, spc,
-                 invert, d3_term, ssymm=False, cosmo=None, mm_freq_scale_factor=False,inertia='global',g4=False, glowfreq=''):
+                 invert, d3_term, ssymm=False, cosmo=None, mm_freq_scale_factor=False,inertia='global',g4=False, glowfreq='',remove_vib_modes=False):
         # List of frequencies and default values
         im_freq_cutoff, frequency_wn, im_frequency_wn, rotemp, roconst, linear_mol, link, freqloc, linkmax, symmno, self.cpu, inverted_freqs = 0.0, [], [], [
             0.0, 0.0, 0.0], [0.0, 0.0, 0.0], 0, 0, 0, 0, 1, [0, 0, 0, 0, 0], []
@@ -504,9 +504,10 @@ class calc_bbe:
                                     im_frequency_wn.append(x)
                         except IndexError:
                             pass
-                        self.frequency_wn = frequency_wn
-                        self.im_freq = im_frequency_wn
-                        self.inverted_freqs = inverted_freqs
+
+                    self.frequency_wn = frequency_wn
+                    self.im_freq = im_frequency_wn
+                    self.inverted_freqs = inverted_freqs
 
                 # For QM calculations look for SCF energies, last one will be the optimized energy
                 elif line.strip().startswith('SCF Done:'):
@@ -661,9 +662,7 @@ class calc_bbe:
             orcadata = orcaparse.parse()
             # try:
             all_freqs = orcadata.vibfreqs.tolist()
-            print(all_freqs)
             most_low_freq = min(all_freqs) # get lowest mode
-            print(most_low_freq)
             im_frequency_wn = []
             inverted_freqs = []
             for x in all_freqs:
@@ -768,7 +767,32 @@ class calc_bbe:
             n_freqs = (n_atoms*3)-6
             for i in range(2,2+n_freqs):
                 frequency_wn.append(float(vib_output[i].split()[-1]))
-        
+
+        if remove_vib_modes:          
+            all_vibrational_modes = []
+            for i, freq in enumerate(im_frequency_wn, start=1): # have 1 indexed modes
+                all_vibrational_modes.append([i, freq])
+            for i, freq in enumerate(frequency_wn, start=(len(im_frequency_wn)+1)): # continuous 1 indexed modes
+                all_vibrational_modes.append([i, freq])
+
+            try:
+                modes_to_remove = [all_vibrational_modes[int(i) - 1] for i in remove_vib_modes] # 0 indexed location
+                for mode in modes_to_remove:
+                    if mode[1] in im_frequency_wn:
+                        im_frequency_wn.remove(mode[1])
+                    elif mode[1] in frequency_wn:
+                        frequency_wn.remove(mode[1])
+                    print(f'   {file}:')
+                    print('   \tRemoved mode', mode[0], '=', mode[1], 'cm-1' )
+            except IndexError:
+                print(f'x  The vib_modes must be in the range of 1 to {len(all_vibrational_modes)}')
+                print(f'   \tNo modes removed from {file}')
+                pass
+            except ValueError:
+                print(f'x  Input is of the wrong format - vib_modes must be numerical')
+                print(f'   \tNo modes removed from {file}')
+                pass
+
         # Skip the calculation if unable to parse the frequencies or zpe from the output file
         if hasattr(self, "zero_point_corr") and rotemp:
             cutoffs = [s_freq_cutoff for freq in frequency_wn]
@@ -785,15 +809,15 @@ class calc_bbe:
                 u_vib = calc_vibrational_energy(frequency_wn, temperature, freq_scale_factor, fract_modelsys)
                 s_rot = calc_rotational_entropy(self.zero_point_corr, linear_mol, symmno, rotemp, temperature)
 
-                print(f'ZPE: {zpe * 3.808798033989866e-7}')
-                print(f'Urot: {u_rot * 3.808798033989866e-7}')
-                print(f'Uvib: {u_vib * 3.808798033989866e-7}')
-                print(f'Srot: {s_rot * 3.808798033989866e-7}')
+                # print(f'ZPE: {zpe * 3.808798033989866e-7}')
+                # print(f'Urot: {u_rot * 3.808798033989866e-7}')
+                # print(f'Uvib: {u_vib * 3.808798033989866e-7}')
+                # print(f'Srot: {s_rot * 3.808798033989866e-7}')
 
                 # Calculate harmonic entropy, free-rotor entropy and damping function for each frequency
                 Svib_rrho = calc_rrho_entropy(frequency_wn, temperature, freq_scale_factor, fract_modelsys)
 
-                print(f'Svib_rrho: {Svib_rrho}')
+                # print(f'Svib_rrho: {Svib_rrho}')
 
                 if s_freq_cutoff > 0.0:
                     Svib_rrqho = calc_rrho_entropy(cutoffs, temperature, freq_scale_factor, fract_modelsys)
