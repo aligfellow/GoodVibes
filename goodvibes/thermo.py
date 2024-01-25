@@ -774,15 +774,19 @@ class calc_bbe:
                 all_vibrational_modes.append([i, freq])
             for i, freq in enumerate(frequency_wn, start=(len(im_frequency_wn)+1)): # continuous 1 indexed modes
                 all_vibrational_modes.append([i, freq])
-
+                    
             try:
-                modes_to_remove = [all_vibrational_modes[int(i) - 1] for i in remove_vib_modes] # 0 indexed location
+                modes_to_remove = [all_vibrational_modes[int(i) - 1] for i in remove_vib_modes if int(i) != 0] # 0 indexed location but also 0 as an input removed the final vib mode
+                if len(modes_to_remove) == 1:
+                    print(f'   {len(modes_to_remove)} mode to remove from {file}')
+                else:
+                    print(f'   {len(modes_to_remove)} modes to remove from {file}')
+
                 for mode in modes_to_remove:
                     if mode[1] in im_frequency_wn:
                         im_frequency_wn.remove(mode[1])
                     elif mode[1] in frequency_wn:
                         frequency_wn.remove(mode[1])
-                    print(f'   {file}:')
                     print('   \tRemoved mode', mode[0], '=', mode[1], 'cm-1' )
             except IndexError:
                 print(f'x  The vib_modes must be in the range of 1 to {len(all_vibrational_modes)}')

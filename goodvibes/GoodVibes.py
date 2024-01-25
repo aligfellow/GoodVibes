@@ -995,12 +995,8 @@ def main():
 
     # Check if user has chosen to remove any vibrational modes
     if options.remove_vib_modes:
-        log.write(f"\no  Caution! Removing the vibrational modes from the calculation.\n")
-        if len(options.remove_vib_modes) == 1:
-            log.write(f"   {len(options.remove_vib_modes)} vibrational mode will be removed.\n")  
-        elif len(options.remove_vib_modes) > 1:
-            log.write(f"   {len(options.remove_vib_modes)} vibrational modes will be removed.\n")
-
+        log.write(f"\no  Caution! Removing vibrational modes from the calculation.\n")
+        
     # Check for special options
     inverted_freqs, inverted_files = [], []
     if options.ssymm:
