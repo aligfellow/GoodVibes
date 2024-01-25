@@ -724,7 +724,7 @@ def main():
     def list_of_strings(arg):
         return arg.split(',')
     
-    parser.add_argument("--remove_vib_modes", dest="remove_vib_modes", type=list_of_strings, default=False, 
+    parser.add_argument("--remove_vib_modes", dest="remove_vib_modes", type=list_of_strings, default=False, metavar="[MODE_LIST]",
                         help="Choice of N vibrational modes to remove. Specify number of mode, eg. 2 for 2nd mode. Multiple modes can be specified as comma separated. (eg. 1,3,5)")
     # Parse Arguments
     (options, args) = parser.parse_known_args()
