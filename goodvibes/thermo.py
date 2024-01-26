@@ -772,7 +772,7 @@ class calc_bbe:
             all_vibrational_modes = []
             for i, freq in enumerate(im_frequency_wn, start=1): # have 1 indexed modes
                 all_vibrational_modes.append([i, freq])
-            for i, freq in enumerate(frequency_wn, start=(len(im_frequency_wn)+1)): # continuous 1 indexed modes
+            for i, freq in enumerate(sorted(frequency_wn), start=(len(im_frequency_wn)+1)): # continuous 1 indexed modes
                 all_vibrational_modes.append([i, freq])
                     
             try:
