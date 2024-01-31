@@ -71,7 +71,7 @@ except:
     from thermo import *
 
 try:
-    from pyDFTD3 import dftd3 as D3
+    from pydftd3 import dftd3 as D3
 except:
     try:
         from dftd3 import dftd3 as D3
@@ -1018,7 +1018,7 @@ def main():
         # computes D3 term if requested, which is then sent to calc bbe as a correction
         d3_energy = 0.0
         if options.D3 or options.D3BJ:
-            verbose, intermolecular, pairwise, abc_term = False, False, False, False
+            verbose, intermolecular, pairwise, abc_term = True, False, False, False
             s6, rs6, s8, bj_a1, bj_a2 = 0.0, 0.0, 0.0, 0.0, 0.0
             functional = level_of_theory(file).split('/')[0]
             if options.D3:
@@ -1028,11 +1028,12 @@ def main():
             if options.ATM: abc_term = True
             try:
                 fileData = getoutData(file)
-                d3_calc = D3.calcD3(fileData, functional, s6, rs6, s8, bj_a1, bj_a2, damp, abc_term, intermolecular,
+                d3_calc = D3.calcD3(fileData, functional, damp, s6, rs6, s8, bj_a1, bj_a2, abc_term, intermolecular,
                                     pairwise, verbose)
                 d3_energy = (d3_calc.attractive_r6_vdw + d3_calc.attractive_r8_vdw + d3_calc.repulsive_abc) / KCAL_TO_AU
+                log.write(f'   Dispersion calculated: {d3_energy:.4g} kcal/mol \n')
             except:
-                log.write('\n   ! Dispersion Correction Failed')
+                log.write('\n   ! Dispersion Correction Failed \n')
                 d3_energy = 0.0
         conc = options.conc
         #check if media correction should be applied

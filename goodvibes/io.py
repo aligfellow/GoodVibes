@@ -538,7 +538,7 @@ def level_of_theory(file):
     repeated_theory = 0
     with open(file) as f:
         data = f.readlines()
-    level, bs = 'none', 'none'
+    level, bs, program = 'none', 'none', 'none'
 
     for line in data:
         if line.strip().find('External calculation') > -1:
@@ -578,6 +578,23 @@ def level_of_theory(file):
         # Remove the restricted R or unrestricted U label
         if level[0] in ('R', 'U'):
             level = level[1:]
+
+        # orca specific parsing -- needed to ensure that the D3 corrections work through pyDFTD3
+        if line.find("* O   R   C   A *") > -1:
+            program = "Orca"
+            break
+    if program == "Orca":
+        for line in data:
+            # check for functional
+            if line.strip().find('Exchange Functional') > -1:
+                exchangeFunctional = line.strip().split()[4]
+            elif line.strip().find('Correlation Functional') > -1:
+                correlationFunctional = line.strip().split()[4]
+        if exchangeFunctional != correlationFunctional:
+            level = exchangeFunctional + correlationFunctional
+        else:
+            level = exchangeFunctional
+
     level_of_theory = '/'.join([level, bs])
     return level_of_theory
 
