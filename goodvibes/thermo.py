@@ -3,7 +3,6 @@ from __future__ import print_function, absolute_import
 
 import ctypes, math, os.path, sys
 import numpy as np  
-import cclib
 
 # Importing regardless of relative import
 try:
@@ -657,11 +656,24 @@ class calc_bbe:
                     self.cpu = [days,hours,mins,secs,msecs]
 
         if self.sp_program == 'Orca' or self.program == 'Orca':
-            # Iterate
-            orcaparse = cclib.parser.ORCA(file)
-            orcadata = orcaparse.parse()
-            # try:
-            all_freqs = orcadata.vibfreqs.tolist()
+            #import cclib  # could parse the frequencies with cclib 
+            #orcaparse = cclib.parser.ORCA(file)
+            #orcadata = orcaparse.parse()
+            #all_freqs = orcadata.vibfreqs.tolist()
+
+            # scan and parse all frequencies without using cclib
+            all_freqs = []
+            for i,line in enumerate(g_output):
+                if line.strip().startswith('VIBRATIONAL FREQUENCIES'):
+                    start_line = i
+                elif line.strip().startswith('NORMAL MODES'):
+                    end_line = i
+            for line in g_output[start_line:end_line]:
+                if 'cm**-1' in line:
+                    vib = float(line.split()[1])
+                    if vib != 0.00:    # orca prints zero modes so these are not needed 
+                        all_freqs.append(vib)
+            
             most_low_freq = min(all_freqs) # get lowest mode
             im_frequency_wn = []
             inverted_freqs = []
@@ -724,9 +736,6 @@ class calc_bbe:
                             float(line.strip().split()[5]),
                             float(line.strip().split()[6])]
                     
-                    # convert to GHz *AFTER* the calculation of rotemps
-                    # self.roconst = [ x * 29.9792458 for x in self.roconst ] # convert to GHz
-
                     # ORCA we have to calculate the rotational temperatures ourselves
                     # rotemp = hc [rocont] / kB 
                     PLANCK_CONSTANT = 6.62606957e-34  # J * s
