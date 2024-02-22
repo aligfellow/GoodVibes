@@ -818,15 +818,8 @@ class calc_bbe:
                 u_vib = calc_vibrational_energy(frequency_wn, temperature, freq_scale_factor, fract_modelsys)
                 s_rot = calc_rotational_entropy(self.zero_point_corr, linear_mol, symmno, rotemp, temperature)
 
-                # print(f'ZPE: {zpe * 3.808798033989866e-7}')
-                # print(f'Urot: {u_rot * 3.808798033989866e-7}')
-                # print(f'Uvib: {u_vib * 3.808798033989866e-7}')
-                # print(f'Srot: {s_rot * 3.808798033989866e-7}')
-
                 # Calculate harmonic entropy, free-rotor entropy and damping function for each frequency
                 Svib_rrho = calc_rrho_entropy(frequency_wn, temperature, freq_scale_factor, fract_modelsys)
-
-                # print(f'Svib_rrho: {Svib_rrho}')
 
                 if s_freq_cutoff > 0.0:
                     Svib_rrqho = calc_rrho_entropy(cutoffs, temperature, freq_scale_factor, fract_modelsys)
