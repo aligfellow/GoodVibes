@@ -716,7 +716,7 @@ class calc_bbe:
                 # Grab Multiplicity
                 elif 'Multiplicity' in line.strip():
                     try:
-                        self.mult = int(line.split()[3])
+                        self.mult = int(line.split()[-1])
                     except:
                         self.mult = 1 # defaulting multiplicity to 1
                 # Grab molecular mass
@@ -738,10 +738,6 @@ class calc_bbe:
                     
                     # ORCA we have to calculate the rotational temperatures ourselves
                     # rotemp = hc [rocont] / kB 
-                    PLANCK_CONSTANT = 6.62606957e-34  # J * s
-                    SPEED_OF_LIGHT = 2.99792458e10  # cm / s
-                    BOLTZMANN_CONSTANT = 1.3806488e-23  # J / K
-
                     self.rotemp = [ PLANCK_CONSTANT * SPEED_OF_LIGHT * x / BOLTZMANN_CONSTANT for x in self.roconst]
                     rotemp = self.rotemp
                     # convert roconst to GHz
